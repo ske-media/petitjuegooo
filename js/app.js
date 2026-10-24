@@ -11,7 +11,7 @@
 
   /* ---------- état ---------- */
   const defaultState = () => ({
-    players: ['Steven', 'Jade', 'Lionel'],
+    players: ['', '', ''],
     scores: [0, 0, 0],
     hot: false,
     sound: true,
@@ -51,7 +51,8 @@
   const rnd = arr => arr[Math.floor(Math.random() * arr.length)];
   const shuffle = arr => { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
   const others = i => [0, 1, 2].filter(x => x !== i);
-  const P = i => S.players[i];
+  const P = i => S.players[i] || ('Joueur ' + (i + 1));
+  const namesSet = () => S.players.every(n => n && n.trim());
   const nameTag = i => `<span class="c${i}">${esc(P(i))}</span>`;
 
   /* Tirage d'une question non encore utilisée (reset automatique quand le stock est vide) */
@@ -102,11 +103,11 @@
 
   /* ---------- avatars pixel ---------- */
   const FACES = [
-    // Steven : cheveux courts + barbe
+    // Joueur 1 : cheveux courts + barbe
     ['..HHHHHH..', '.HHHHHHHH.', '.HSSSSSSH.', '.SSESSESS.', '.SSSSSSSS.', '.SBSMMSBS.', '..BBBBBB..', '...BBBB...', '.CCCCCCCC.', 'CCCCCCCCCC'],
-    // Jade : cheveux longs
+    // Joueur 2 : cheveux longs
     ['..HHHHHH..', '.HHHHHHHH.', 'HHSSSSSSHH', 'HHSESSESHH', 'HHSSSSSSHH', 'HHSSMMSSHH', 'HH.SSSS.HH', 'HH..SS..HH', '.CCCCCCCC.', 'CCCCCCCCCC'],
-    // Lionel : pics + lunettes
+    // Joueur 3 : pics + lunettes
     ['H.HH..HH.H', '.HHHHHHHH.', '.HSSSSSSH.', '.GEGSSGEG.', '.SSSSSSSS.', '.SSSMMSSS.', '..SSSSSS..', '...SSSS...', '.CCCCCCCC.', 'CCCCCCCCCC']
   ];
   const PAL = [
@@ -189,6 +190,7 @@
         <button class="btn ghost" data-act="custom">✏️ NOS QUESTIONS</button>
         <button class="btn ghost" data-act="settings">⚙️</button>
       </div>
+      <button class="btn ghost" data-act="newNight">👥 NOUVELLE SOIRÉE (autres joueurs)</button>
       <div class="coin blink mt">INSERT COIN ▸ CHOISIS UN JEU</div>
       <div class="credits">© ske-media arcade · ${S.stats.rounds} manche${S.stats.rounds > 1 ? 's' : ''} jouée${S.stats.rounds > 1 ? 's' : ''}</div>
     `);
@@ -643,7 +645,7 @@
       ${awards.length ? `<div class="awards">${awards.map(a => `<div class="award"><span class="ico">${a.t.icon}</span><span><div class="nm">${esc(a.t.name)}</div><div class="ds">${esc(a.t.desc)}</div></span>${avatar(a.who)}</div>`).join('')}</div>` : '<div class="muted center">Jouez quelques manches pour débloquer des titres.</div>'}
       <div class="coin mt">${st.rounds} manche${st.rounds > 1 ? 's' : ''} jouée${st.rounds > 1 ? 's' : ''}</div>
       <div class="grow"></div>
-      <button class="btn ghost" data-act="resetScores">🔄 NOUVELLE PARTIE (scores à zéro)</button>
+      <button class="btn ghost" data-act="newNight">👥 NOUVELLE SOIRÉE (joueurs et scores à zéro)</button>
       <button class="btn primary" data-act="home">RETOUR BORNE</button>
     `);
   }
@@ -655,9 +657,9 @@
   const TABS = { qui: 'QUI DE NOUS 3', cinq: '5 SECONDES', tete: 'DANS LA TÊTE', prefere: 'TU PRÉFÈRES' };
   const HINTS = {
     qui: 'Ex : Qui de nous a déjà pleuré devant Pékin Express ?',
-    cinq: 'Ex : 3 surnoms qu\'on donne à Lionel',
+    cinq: 'Ex : 3 surnoms qu\'on donne au plus petit du groupe',
     tete: 'Utilise {P} pour le prénom. Ex : Le pire achat de {P} ?',
-    prefere: 'Sépare A et B par une barre |. Ex : Vivre chez Jade | Vivre chez Steven'
+    prefere: 'Sépare A et B par une barre |. Ex : Un mois sans sucre | Un mois sans sel'
   };
   function custom() {
     const list = S.custom[customTab];
@@ -690,7 +692,7 @@
       <button class="btn ghost" data-act="resetUsed">♻️ REMETTRE TOUTES LES QUESTIONS DANS LE STOCK</button>
       <button class="btn ghost" data-act="resetScores">🔄 SCORES ET TITRES À ZÉRO</button>
       <button class="btn ghost" data-act="resetAll" style="color:var(--red)">💣 TOUT EFFACER (y compris nos questions)</button>
-      <div class="credits mt">PETIT JUEGO v1 · fait maison, zéro serveur, zéro tracking.<br>Tout est dans ce téléphone.</div>
+      <div class="credits mt">PETIT JUEGO · fait maison, zéro serveur, zéro tracking.<br>Tout est dans ce téléphone.</div>
     `);
   }
 
@@ -735,9 +737,31 @@
   // Entrée = valider sur les écrans à saisie
   document.addEventListener('keydown', e => {
     if (e.key !== 'Enter') return;
-    const btn = $('[data-act=g4saveAns], [data-act=g4saveGuess], [data-act=customAdd]');
+    const btn = $('[data-act=g4saveAns], [data-act=g4saveGuess], [data-act=customAdd], [data-act=startNight]');
     if (btn && document.activeElement && document.activeElement.tagName === 'INPUT') { e.preventDefault(); btn.click(); }
   });
+
+  /* ---------- nouvelle soirée : qui joue ? ---------- */
+  function setup() {
+    render(`<div class="pixelbar"></div>
+      <h1 class="title mt">QUI<br><span class="neon">JOUE ?</span></h1>
+      <div class="sub">Trois joueurs, un téléphone qu'on se passe.<br>Entrez vos prénoms dans l'ordre où vous êtes assis.</div>
+      <div class="stack mt">${[0, 1, 2].map(i => `<div class="row">${avatar(i, 'big')}<input type="text" id="pn${i}" maxlength="12" placeholder="Prénom du joueur ${i + 1}" value="${esc(S.players[i] || '')}" autocomplete="off" autocapitalize="words"></div>`).join('')}</div>
+      <div class="grow"></div>
+      <button class="btn yellow big" data-act="startNight">LANCER LA SOIRÉE ▶</button>
+      <div class="coin">les scores et les titres repartent de zéro</div>`);
+    later(() => { const f = $('#pn0'); if (f && !f.value) f.focus(); }, 150);
+  }
+  ACT.startNight = () => {
+    const names = [0, 1, 2].map(i => $('#pn' + i).value.trim());
+    if (names.some(n => !n)) { shake(); SFX.fail(); return; }
+    const lower = names.map(n => n.toLowerCase());
+    if (new Set(lower).size !== 3) { shake(); SFX.fail(); $('#pn0').placeholder = 'Deux prénoms identiques…'; return; }
+    const d = defaultState();
+    S.players = names; S.scores = d.scores; S.stats = d.stats; S.turn = d.turn; save();
+    SFX.fanfare(); later(home, 200);
+  };
+  ACT.newNight = () => { if (!confirm('Nouvelle soirée ? Les scores et les titres repartent de zéro.')) return; SFX.coin(); setup(); };
 
   /* ---------- écran d'allumage ---------- */
   function boot() {
@@ -745,11 +769,11 @@
       <div class="pixelbar" style="width:100%"></div>
       <h1 class="title">PETIT<br><span class="neon">JUEGO</span></h1>
       <div class="players3">${[0, 1, 2].map(i => avatar(i, 'big bounce', `style="animation-delay:${i * .15}s"`)).join('')}</div>
-      <div class="muted">${esc(P(0))} · ${esc(P(1))} · ${esc(P(2))}</div>
+      <div class="muted">${namesSet() ? esc(P(0)) + ' · ' + esc(P(1)) + ' · ' + esc(P(2)) : 'Un téléphone, trois joueurs, zéro mensonge (ou presque).'}</div>
       <button class="btn yellow big blink" data-act="boot">PRESS START</button>
       <div class="coin">3 JOUEURS · 1 TÉLÉPHONE · 5 JEUX</div>
     </div>`);
   }
-  ACT.boot = () => { SFX.coin(); later(home, 120); };
+  ACT.boot = () => { SFX.coin(); later(namesSet() ? home : setup, 120); };
   boot();
 })();

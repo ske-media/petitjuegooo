@@ -2,7 +2,7 @@
 
 Une borne d'arcade rétro pour apprendre à se connaître à trois. Un téléphone qu'on se passe, cinq mini-jeux, un score cumulé sur la soirée et des titres décernés au podium.
 
-**Joueurs par défaut :** Steven · Jade · Lionel (modifiables dans ⚙️).
+**Trois joueurs.** Au lancement, le jeu demande les prénoms de chacun ; « Nouvelle soirée » remet joueurs, scores et titres à zéro.
 
 ## Les 5 jeux
 
